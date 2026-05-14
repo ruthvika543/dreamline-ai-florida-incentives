@@ -24,11 +24,13 @@ Extract structured incentive program data from this webpage text.
 Return ONLY valid JSON.
 
 Fields:
-program_name, state, city, incentive_type, property_type,
+program_name, state, city, zip_codes,  incentive_type, property_type,
 description, eligibility_criteria, incentive_amount,
 valid_until, updated_at, review_needed, program_links
 
 Rules:
+- zip_codes should contain Florida ZIP codes if available.
+- If statewide, return "All Florida ZIP Codes"
 - If missing → null
 - review_needed = "Yes" if unclear
 - incentive_type must be: Grants, Rebates, Finance Solutions, Tax Credits, Investments
@@ -48,4 +50,13 @@ TEXT:
     )
 
     content = response.choices[0].message.content
-    return json.loads(clean_json_response(content))
+
+    data = json.loads(clean_json_response(content))
+
+    if isinstance(data, list):
+        if len(data) > 0:
+            data = data[0]
+        else:
+            data = {}
+
+    return data

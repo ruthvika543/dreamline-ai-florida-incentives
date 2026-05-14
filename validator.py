@@ -2,7 +2,7 @@ from datetime import date
 
 def validate_record(record):
     required_fields = [
-        "program_name", "state", "city", "incentive_type",
+        "program_name", "state", "city", "zip_codes", "incentive_type",
         "property_type", "description", "eligibility_criteria",
         "incentive_amount", "valid_until", "updated_at",
         "review_needed", "program_links"
