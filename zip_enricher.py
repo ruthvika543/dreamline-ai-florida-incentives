@@ -1,46 +1,19 @@
-import pgeocode
-import pandas as pd
+from source_registry import URL_RECORDS
 
-nomi = pgeocode.Nominatim("us")
+URL_LOOKUP = {item["url"]: item for item in URL_RECORDS}
 
-def get_florida_zips_by_city(city):
-    all_zips = nomi._data
 
-    results = all_zips[
-        (all_zips["state_code"] == "FL") &
-        (all_zips["place_name"].str.lower() == city.lower())
-    ]
+def clean_city_zip(record, url):
+    meta = URL_LOOKUP.get(url, {})
 
-    return ",".join(sorted(results["postal_code"].astype(str).unique()))
+    record["city"] = meta.get("city", "Review Needed")
+    record["zip_codes"] = meta.get("zip_codes", "Review Needed")
+    record["source_type"] = meta.get("source_type", "generic")
+    record["program_links"] = url
 
-def get_florida_zips_by_county(county):
-    all_zips = nomi._data
+    if record["city"] == "Review Needed" or record["zip_codes"] == "Review Needed":
+        record["review_needed"] = "Yes"
+    else:
+        record["review_needed"] = "No"
 
-    results = all_zips[
-        (all_zips["state_code"] == "FL") &
-        (all_zips["county_name"].str.lower().str.contains(county.lower(), na=False))
-    ]
-
-    return ",".join(sorted(results["postal_code"].astype(str).unique()))
-
-def assign_zip_codes(record):
-    city = str(record.get("city", "")).strip()
-    state = str(record.get("state", "")).strip()
-    program_name = str(record.get("program_name", "")).lower()
-    link = str(record.get("program_links", "")).lower()
-
-    if state.lower() == "florida" and city.lower() in ["statewide", "all florida", "florida", "nan", "none", ""]:
-        return "All Florida ZIP Codes"
-
-    if "mysafeflhome" in link or "irs.gov" in link:
-        return "All Florida ZIP Codes"
-
-    if "tampaelectric" in link or "teco" in program_name:
-        return get_florida_zips_by_county("Hillsborough")
-
-    if city and city.lower() not in ["nan", "none", "statewide", "all florida"]:
-        zips = get_florida_zips_by_city(city)
-        if zips:
-            return zips
-
-    return "Review Needed"
+    return record
