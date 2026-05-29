@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import time
 
 from scraper import scrape_page_text
 from ai_extractor import extract_incentive_data
@@ -7,14 +8,11 @@ from zip_enricher import clean_city_zip
 from validator import validate_record
 from source_registry import URL_RECORDS
 
-
 # Create output folder if it does not exist
 os.makedirs("output", exist_ok=True)
 
-
 # Load URLs from source_registry.py
 urls = [item["url"] for item in URL_RECORDS]
-
 
 records = []
 
@@ -41,15 +39,18 @@ for url in urls:
         records.append(data)
 
         print("Success")
+        
+        # Step 7: Wait before next request to avoid rate limits
+        time.sleep(2)
 
     except Exception as e:
         print(f"Failed: {url}")
         print(e)
-
+        # Optional: Still wait even on failures to be safe
+        time.sleep(1)
 
 # Convert extracted records into DataFrame
 df = pd.DataFrame(records)
-
 
 # Final CSV column order
 columns = [
@@ -69,21 +70,17 @@ columns = [
     "program_links"
 ]
 
-
 # Add missing columns if LLM does not return something
 for col in columns:
     if col not in df.columns:
         df[col] = None
 
-
 # Reorder columns
 df = df[columns]
-
 
 # Save final CSV
 output_file = "output/shivaani_extracted_florida_incentives.csv"
 df.to_csv(output_file, index=False)
-
 
 print("CSV created successfully!")
 print(f"Total records created: {len(df)}")

@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 
-
 def detect_source_type(url):
 
     if url.endswith(".pdf"):
@@ -31,40 +30,37 @@ def detect_source_type(url):
         return "generic"
 
 
+import trafilatura
+
 def scrape_html_page(url):
-
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=20
+    """
+    Uses Trafilatura for intelligent main content extraction
+    """
+    # Fetch and extract main content
+    downloaded = trafilatura.fetch_url(url)
+    
+    if downloaded is None:
+        # Fallback to requests if trafilatura fetch fails
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers, timeout=20)
+        response.raise_for_status()
+        downloaded = response.text
+    
+    # Extract main content with structure preserved
+    text = trafilatura.extract(
+        downloaded,
+        include_comments=False,
+        include_tables=True,      # Keep tables (often have eligibility info)
+        include_links=False,      # Don't need URLs in text
+        no_fallback=False,        # Use fallback extraction if needed
+        favor_recall=True         # Prioritize getting all content
     )
-
-    response.raise_for_status()
-
-    soup = BeautifulSoup(
-        response.text,
-        "html.parser"
-    )
-
-    for tag in soup([
-        "script",
-        "style",
-        "nav",
-        "footer",
-        "header"
-    ]):
-        tag.decompose()
-
-    text = soup.get_text(
-        separator=" ",
-        strip=True
-    )
-
-    return text[:8000]
+    
+    if text is None:
+        return ""
+    
+    # Increase limit to 16,000 characters (fits in Llama 3.1's context)
+    return text[:16000]
 
 
 def scrape_page_text(url):
